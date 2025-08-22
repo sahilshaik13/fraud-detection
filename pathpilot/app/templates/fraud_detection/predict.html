@@ -1,0 +1,153 @@
+{% extends 'fraud_detection/base.html' %}
+
+{% block content %}
+<div class="row justify-content-center fade-in">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <h3 class="mb-0"><i class="fas fa-search me-2"></i>Analyze Job Posting</h3>
+            </div>
+            <div class="card-body">
+                <form id="fraudForm" method="post" action="{% url 'fraud_detection:predict' %}">
+                    {% csrf_token %}
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="title" class="form-label">Job Title *</label>
+                            <input type="text" class="form-control" id="title" name="title" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="location" class="form-label">Location</label>
+                            <input type="text" class="form-control" id="location" name="location" placeholder="e.g., US, NY, New York">
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="department" class="form-label">Department</label>
+                            <input type="text" class="form-control" id="department" name="department">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="salary_range" class="form-label">Salary Range</label>
+                            <input type="text" class="form-control" id="salary_range" name="salary_range" placeholder="e.g., $50,000-$70,000">
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="company_profile" class="form-label">Company Profile</label>
+                        <textarea class="form-control" id="company_profile" name="company_profile" rows="4" placeholder="Brief description of the company..."></textarea>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="description" class="form-label">Job Description *</label>
+                        <textarea class="form-control" id="description" name="description" rows="6" required placeholder="Detailed job description including responsibilities..."></textarea>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="requirements" class="form-label">Requirements</label>
+                        <textarea class="form-control" id="requirements" name="requirements" rows="4" placeholder="Required skills, experience, and qualifications..."></textarea>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="benefits" class="form-label">Benefits</label>
+                        <textarea class="form-control" id="benefits" name="benefits" rows="3" placeholder="Compensation, benefits, and perks..."></textarea>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <label for="employment_type" class="form-label">Employment Type</label>
+                            <select class="form-select" id="employment_type" name="employment_type">
+                                <option value="">Select Type</option>
+                                <option value="Full-time">Full-time</option>
+                                <option value="Part-time">Part-time</option>
+                                <option value="Contract">Contract</option>
+                                <option value="Internship">Internship</option>
+                                <option value="Temporary">Temporary</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="required_experience" class="form-label">Experience Level</label>
+                            <select class="form-select" id="required_experience" name="required_experience">
+                                <option value="">Select Level</option>
+                                <option value="Entry level">Entry level</option>
+                                <option value="Mid-Senior level">Mid-Senior level</option>
+                                <option value="Director">Director</option>
+                                <option value="Executive">Executive</option>
+                                <option value="Not Applicable">Not Applicable</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="required_education" class="form-label">Education</label>
+                            <select class="form-select" id="required_education" name="required_education">
+                                <option value="">Select Education</option>
+                                <option value="High School">High School</option>
+                                <option value="Associate Degree">Associate Degree</option>
+                                <option value="Bachelor's Degree">Bachelor's Degree</option>
+                                <option value="Master's Degree">Master's Degree</option>
+                                <option value="Doctoral Degree">Doctoral Degree</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="industry" class="form-label">Industry</label>
+                            <input type="text" class="form-control" id="industry" name="industry" placeholder="e.g., Technology, Healthcare">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="function" class="form-label">Function</label>
+                            <input type="text" class="form-control" id="function" name="function" placeholder="e.g., Marketing, Engineering">
+                        </div>
+                    </div>
+                    
+                    <div class="row mb-3">
+                        <div class="col-md-12">
+                            <div class="form-check form-check-inline">
+                                <input class="form-check-input" type="checkbox" id="telecommuting" name="telecommuting">
+                                <label class="form-check-label" for="telecommuting">Telecommuting Allowed</label>
+                            </div>
+                            <div class="form-check form-check-inline">
+                                <input class="form-check-input" type="checkbox" id="has_company_logo" name="has_company_logo">
+                                <label class="form-check-label" for="has_company_logo">Has Company Logo</label>
+                            </div>
+                            <div class="form-check form-check-inline">
+                                <input class="form-check-input" type="checkbox" id="has_questions" name="has_questions">
+                                <label class="form-check-label" for="has_questions">Has Screening Questions</label>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-primary btn-lg" id="submitBtn">
+                            <i class="fas fa-search me-2"></i>Analyze for Fraud
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Loading Modal -->
+<div class="modal fade" id="loadingModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-body text-center p-4">
+                <div class="spinner-border text-primary mb-3" role="status"></div>
+                <h5>Analyzing Job Posting...</h5>
+                <p class="text-muted">Our AI is processing the data for fraud detection</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+$(document).ready(function() {
+    $('#fraudForm').on('submit', function(e) {
+        $('#loadingModal').modal('show');
+        $('#submitBtn').prop('disabled', true);
+    });
+});
+</script>
+{% endblock %}

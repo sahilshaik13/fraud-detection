@@ -1,0 +1,23 @@
+{% extends 'fraud_detection/base.html' %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-6 text-center">
+        <div class="card">
+            <div class="card-body">
+                <i class="fas fa-exclamation-triangle fa-5x text-warning mb-4"></i>
+                <h3 class="text-danger">Oops! Something went wrong</h3>
+                <p class="text-muted">{{ error|default:"An unexpected error occurred while processing your request." }}</p>
+                <div class="mt-4">
+                    <a href="{% url 'fraud_detection:home' %}" class="btn btn-primary me-2">
+                        <i class="fas fa-home me-2"></i>Go Home
+                    </a>
+                    <a href="{% url 'fraud_detection:predict' %}" class="btn btn-outline-primary">
+                        <i class="fas fa-retry me-2"></i>Try Again
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

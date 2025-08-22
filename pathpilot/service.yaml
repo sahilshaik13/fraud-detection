@@ -1,0 +1,7 @@
+startupProbe:
+  tcpSocket:
+    port: 8080
+  initialDelaySeconds: 0
+  timeoutSeconds: 240
+  periodSeconds: 240
+  failureThreshold: 1

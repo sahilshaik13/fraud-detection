@@ -1,0 +1,290 @@
+{% extends 'fraud_detection/base.html' %}
+
+{% block content %}
+<div class="fade-in">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2><i class="fas fa-chart-bar me-2"></i>Analytics Dashboard</h2>
+        <div class="text-muted">Last updated: {{ "now"|date:"M d, Y H:i" }}</div>
+    </div>
+    
+    <!-- Statistics Cards -->
+    <div class="row mb-4">
+        <div class="col-md-3 mb-3">
+            <div class="card stats-card">
+                <div class="card-body text-center">
+                    <i class="fas fa-clipboard-list fa-2x mb-2"></i>
+                    <h3>{{ total_predictions }}</h3>
+                    <p class="mb-0">Total Analyzed</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 mb-3">
+            <div class="card stats-card danger">
+                <div class="card-body text-center">
+                    <i class="fas fa-exclamation-triangle fa-2x mb-2"></i>
+                    <h3>{{ fraud_count }}</h3>
+                    <p class="mb-0">Fraud Detected</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 mb-3">
+            <div class="card stats-card success">
+                <div class="card-body text-center">
+                    <i class="fas fa-check-circle fa-2x mb-2"></i>
+                    <h3>{{ legitimate_count }}</h3>
+                    <p class="mb-0">Legitimate Jobs</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 mb-3">
+            <div class="card stats-card">
+                <div class="card-body text-center">
+                    <i class="fas fa-percentage fa-2x mb-2"></i>
+                    <h3>{{ fraud_percentage|floatformat:1 }}%</h3>
+                    <p class="mb-0">Fraud Rate</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Risk Distribution and Industry Analysis -->
+    <div class="row mb-4">
+        <div class="col-lg-6 mb-4">
+            <div class="card h-100">
+                <div class="card-header">
+                    <h5><i class="fas fa-chart-pie me-2"></i>Risk Level Distribution</h5>
+                </div>
+                <div class="card-body">
+                    {% if risk_distribution %}
+                        {% for level, count in risk_distribution.items %}
+                        <div class="mb-3">
+                            <div class="d-flex justify-content-between mb-1">
+                                <span class="risk-{{ level|lower }}">
+                                    <i class="fas fa-circle me-1"></i>{{ level }} Risk
+                                </span>
+                                <span><strong>{{ count }}</strong></span>
+                            </div>
+                            <div class="progress" style="height: 8px;">
+                                <div class="progress-bar 
+                                    {% if level == 'High' %}bg-danger
+                                    {% elif level == 'Medium' %}bg-warning
+                                    {% else %}bg-success{% endif %}" 
+                                     style="width: {% if total_predictions > 0 %}{% widthratio count total_predictions 100 %}{% else %}0{% endif %}%">
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <p class="text-muted">No risk data available yet.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-lg-6 mb-4">
+            <div class="card h-100">
+                <div class="card-header">
+                    <h5><i class="fas fa-industry me-2"></i>Top Industries Analyzed</h5>
+                </div>
+                <div class="card-body">
+                    {% if industry_stats %}
+                        {% for industry in industry_stats %}
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span class="text-truncate me-2" title="{{ industry.industry|default:'Unknown' }}">
+                                {{ industry.industry|default:"Unknown"|truncatechars:20 }}
+                            </span>
+                            <div>
+                                <span class="badge bg-primary me-1">{{ industry.total_jobs }}</span>
+                                {% if industry.fraud_count > 0 %}
+                                <span class="badge bg-danger">{{ industry.fraud_count }} fraud</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <p class="text-muted">No industry data available yet.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Recent Predictions with Improved Pagination -->
+    <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="mb-0"><i class="fas fa-history me-2"></i>Recent Analysis</h5>
+            <div class="d-flex align-items-center">
+                <small class="text-muted me-3">
+                    {% if recent_predictions.has_other_pages %}
+                        Page {{ recent_predictions.number }} of {{ recent_predictions.paginator.num_pages }}
+                    {% endif %}
+                </small>
+                {% if total_predictions > 10 %}
+                <small class="text-muted">Showing {{ recent_predictions|length }} of {{ total_predictions }} results</small>
+                {% endif %}
+            </div>
+        </div>
+        <div class="card-body">
+            {% if recent_predictions %}
+            <!-- Mobile-friendly table -->
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th style="width: 80px;">Job ID</th>
+                            <th style="min-width: 200px;">Title</th>
+                            <th style="width: 100px;">Risk Level</th>
+                            <th style="width: 120px;">Fraud Prob.</th>
+                            <th style="width: 120px;">Date</th>
+                            <th style="width: 80px;">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for prediction in recent_predictions %}
+                        <tr>
+                            <td class="text-primary fw-bold">#{{ prediction.job_posting.job_id }}</td>
+                            <td>
+                                <div class="text-truncate" style="max-width: 250px;" title="{{ prediction.job_posting.title }}">
+                                    {{ prediction.job_posting.title }}
+                                </div>
+                                {% if prediction.job_posting.location %}
+                                <small class="text-muted">{{ prediction.job_posting.location|truncatechars:30 }}</small>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <span class="badge 
+                                    {% if prediction.risk_level == 'High' %}bg-danger
+                                    {% elif prediction.risk_level == 'Medium' %}bg-warning text-dark
+                                    {% else %}bg-success{% endif %} fs-6">
+                                    {{ prediction.risk_level }}
+                                </span>
+                            </td>
+                            <td>
+                                <strong class="
+                                    {% if prediction.fraud_probability > 0.7 %}text-danger
+                                    {% elif prediction.fraud_probability > 0.4 %}text-warning
+                                    {% else %}text-success{% endif %}">
+                                    {{ prediction.fraud_probability|floatformat:1 }}%
+                                </strong>
+                            </td>
+                            <td>
+                                <div>{{ prediction.created_at|date:"M d" }}</div>
+                                <small class="text-muted">{{ prediction.created_at|date:"H:i" }}</small>
+                            </td>
+                            <td>
+                                <a href="{% url 'fraud_detection:job_detail' prediction.job_posting.job_id %}" 
+                                   class="btn btn-sm btn-outline-primary" title="View Details">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            
+            <!-- Improved Pagination Controls -->
+            {% if recent_predictions.has_other_pages %}
+            <nav aria-label="Predictions pagination" class="mt-4">
+                <ul class="pagination pagination-sm justify-content-center mb-0">
+                    <!-- First Page -->
+                    {% if recent_predictions.number > 3 %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page=1" title="First page">
+                                <i class="fas fa-angle-double-left"></i>
+                            </a>
+                        </li>
+                    {% endif %}
+                    
+                    <!-- Previous Page -->
+                    {% if recent_predictions.has_previous %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ recent_predictions.previous_page_number }}" title="Previous">
+                                <i class="fas fa-angle-left"></i>
+                            </a>
+                        </li>
+                    {% endif %}
+                    
+                    <!-- Page Numbers (Limited Range) -->
+                    {% for num in recent_predictions.paginator.page_range %}
+                        {% if num >= recent_predictions.number|add:'-2' and num <= recent_predictions.number|add:'2' %}
+                            {% if recent_predictions.number == num %}
+                                <li class="page-item active">
+                                    <span class="page-link">{{ num }}</span>
+                                </li>
+                            {% else %}
+                                <li class="page-item">
+                                    <a class="page-link" href="?page={{ num }}">{{ num }}</a>
+                                </li>
+                            {% endif %}
+                        {% endif %}
+                    {% endfor %}
+                    
+                    <!-- Next Page -->
+                    {% if recent_predictions.has_next %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ recent_predictions.next_page_number }}" title="Next">
+                                <i class="fas fa-angle-right"></i>
+                            </a>
+                        </li>
+                    {% endif %}
+                    
+                    <!-- Last Page -->
+                    {% if recent_predictions.number < recent_predictions.paginator.num_pages|add:'-2' %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ recent_predictions.paginator.num_pages }}" title="Last page">
+                                <i class="fas fa-angle-double-right"></i>
+                            </a>
+                        </li>
+                    {% endif %}
+                </ul>
+                
+                <!-- Page Info -->
+                <div class="text-center mt-2">
+                    <small class="text-muted">
+                        Showing {{ recent_predictions.start_index }}-{{ recent_predictions.end_index }} 
+                        of {{ recent_predictions.paginator.count }} results
+                    </small>
+                </div>
+            </nav>
+            {% endif %}
+            
+            {% else %}
+            <!-- No Data State -->
+            <div class="text-center py-5">
+                <i class="fas fa-search fa-3x text-muted mb-3"></i>
+                <h5 class="text-muted">No predictions yet</h5>
+                <p class="text-muted mb-4">Start by analyzing your first job posting to see data here.</p>
+                <a href="{% url 'fraud_detection:predict' %}" class="btn btn-primary">
+                    <i class="fas fa-plus me-2"></i>Analyze Job Posting
+                </a>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    
+    <!-- Quick Actions -->
+    <div class="text-center mt-4">
+        <a href="{% url 'fraud_detection:predict' %}" class="btn btn-primary me-2">
+            <i class="fas fa-plus me-2"></i>New Analysis
+        </a>
+        <a href="{% url 'fraud_detection:home' %}" class="btn btn-outline-secondary">
+            <i class="fas fa-home me-2"></i>Back to Home
+        </a>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+$(document).ready(function() {
+    // Add tooltips to truncated text
+    $('[title]').tooltip();
+    
+    // Auto-refresh functionality (optional)
+    // setTimeout(function() {
+    //     location.reload();
+    // }, 300000); // Refresh every 5 minutes
+});
+</script>
+{% endblock %}

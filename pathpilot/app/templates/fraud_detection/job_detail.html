@@ -1,0 +1,182 @@
+{% extends 'fraud_detection/base.html' %}
+
+{% block content %}
+<div class="row fade-in">
+    <div class="col-lg-8">
+        <!-- Job Information -->
+        <div class="card mb-4">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5><i class="fas fa-briefcase me-2"></i>Job Details</h5>
+                <span class="badge bg-{% if fraud_prediction.risk_level == 'High' %}danger{% elif fraud_prediction.risk_level == 'Medium' %}warning{% else %}success{% endif %} fs-6">
+                    {{ fraud_prediction.risk_level }} Risk
+                </span>
+            </div>
+            <div class="card-body">
+                <h4 class="text-primary">{{ job_posting.title }}</h4>
+                
+                <div class="row mb-3">
+                    {% if job_posting.location %}
+                    <div class="col-md-6">
+                        <small class="text-muted">Location</small>
+                        <p><i class="fas fa-map-marker-alt me-2"></i>{{ job_posting.location }}</p>
+                    </div>
+                    {% endif %}
+                    {% if job_posting.department %}
+                    <div class="col-md-6">
+                        <small class="text-muted">Department</small>
+                        <p><i class="fas fa-building me-2"></i>{{ job_posting.department }}</p>
+                    </div>
+                    {% endif %}
+                </div>
+                
+                <div class="row mb-3">
+                    {% if job_posting.salary_range %}
+                    <div class="col-md-6">
+                        <small class="text-muted">Salary Range</small>
+                        <p><i class="fas fa-dollar-sign me-2"></i>{{ job_posting.salary_range }}</p>
+                    </div>
+                    {% endif %}
+                    {% if job_posting.employment_type %}
+                    <div class="col-md-6">
+                        <small class="text-muted">Employment Type</small>
+                        <p><i class="fas fa-clock me-2"></i>{{ job_posting.employment_type }}</p>
+                    </div>
+                    {% endif %}
+                </div>
+                
+                {% if job_posting.company_profile %}
+                <div class="mb-3">
+                    <h6>Company Profile</h6>
+                    <div class="bg-light p-3 rounded">{{ job_posting.company_profile }}</div>
+                </div>
+                {% endif %}
+                
+                <div class="mb-3">
+                    <h6>Job Description</h6>
+                    <div class="bg-light p-3 rounded">{{ job_posting.description }}</div>
+                </div>
+                
+                {% if job_posting.requirements %}
+                <div class="mb-3">
+                    <h6>Requirements</h6>
+                    <div class="bg-light p-3 rounded">{{ job_posting.requirements }}</div>
+                </div>
+                {% endif %}
+                
+                {% if job_posting.benefits %}
+                <div class="mb-3">
+                    <h6>Benefits</h6>
+                    <div class="bg-light p-3 rounded">{{ job_posting.benefits }}</div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-4">
+        <!-- Fraud Analysis -->
+        <div class="card mb-4">
+            <div class="card-header {% if fraud_prediction.is_fraudulent %}bg-danger{% else %}bg-success{% endif %} text-white">
+                <h6 class="mb-0">
+                    <i class="fas {% if fraud_prediction.is_fraudulent %}fa-exclamation-triangle{% else %}fa-check-circle{% endif %} me-2"></i>
+                    Fraud Analysis
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="text-center mb-3">
+                    <h4 class="{% if fraud_prediction.is_fraudulent %}text-danger{% else %}text-success{% endif %}">
+                        {% if fraud_prediction.is_fraudulent %}FRAUD DETECTED{% else %}LEGITIMATE{% endif %}
+                    </h4>
+                    <div class="progress mb-3" style="height: 20px;">
+                        <div class="progress-bar {% if fraud_prediction.fraud_probability > 0.5 %}bg-danger{% else %}bg-success{% endif %}" 
+                             style="width: {{ fraud_prediction.fraud_probability|floatformat:1 }}%">
+                            {{ fraud_prediction.fraud_probability|floatformat:1 }}%
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="mb-2">
+                    <div class="d-flex justify-content-between">
+                        <span>Confidence Score:</span>
+                        <span class="fw-bold">{{ fraud_prediction.confidence_score|floatformat:1 }}%</span>
+                    </div>
+                </div>
+                <div class="mb-2">
+                    <div class="d-flex justify-content-between">
+                        <span>Fraud Probability:</span>
+                        <span class="fw-bold">{{ fraud_prediction.fraud_probability|floatformat:1 }}%</span>
+                    </div>
+                </div>
+                <div class="mb-2">
+                    <div class="d-flex justify-content-between">
+                        <span>Sentiment Score:</span>
+                        <span class="fw-bold">{{ fraud_prediction.sentiment_score|floatformat:2 }}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Job Metadata -->
+        <div class="card">
+            <div class="card-header">
+                <h6 class="mb-0"><i class="fas fa-info-circle me-2"></i>Metadata</h6>
+            </div>
+            <div class="card-body">
+                <div class="mb-2">
+                    <div class="d-flex justify-content-between">
+                        <span>Job ID:</span>
+                        <span class="text-primary">#{{ job_posting.job_id }}</span>
+                    </div>
+                </div>
+                <div class="mb-2">
+                    <div class="d-flex justify-content-between">
+                        <span>Analyzed:</span>
+                        <span>{{ fraud_prediction.created_at|date:"M d, Y H:i" }}</span>
+                    </div>
+                </div>
+                {% if job_posting.industry %}
+                <div class="mb-2">
+                    <div class="d-flex justify-content-between">
+                        <span>Industry:</span>
+                        <span>{{ job_posting.industry }}</span>
+                    </div>
+                </div>
+                {% endif %}
+                {% if job_posting.required_experience %}
+                <div class="mb-2">
+                    <div class="d-flex justify-content-between">
+                        <span>Experience:</span>
+                        <span>{{ job_posting.required_experience }}</span>
+                    </div>
+                </div>
+                {% endif %}
+                
+                <hr>
+                
+                <div class="d-flex justify-content-between mb-1">
+                    <span>Remote Work:</span>
+                    <span>{% if job_posting.telecommuting %}✓{% else %}✗{% endif %}</span>
+                </div>
+                <div class="d-flex justify-content-between mb-1">
+                    <span>Company Logo:</span>
+                    <span>{% if job_posting.has_company_logo %}✓{% else %}✗{% endif %}</span>
+                </div>
+                <div class="d-flex justify-content-between">
+                    <span>Screening Questions:</span>
+                    <span>{% if job_posting.has_questions %}✓{% else %}✗{% endif %}</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Back to Dashboard -->
+<div class="text-center mt-4">
+    <a href="{% url 'fraud_detection:dashboard' %}" class="btn btn-primary">
+        <i class="fas fa-arrow-left me-2"></i>Back to Dashboard
+    </a>
+    <a href="{% url 'fraud_detection:predict' %}" class="btn btn-outline-primary">
+        <i class="fas fa-plus me-2"></i>Analyze Another Job
+    </a>
+</div>
+{% endblock %}

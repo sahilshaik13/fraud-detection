@@ -1,0 +1,57 @@
+{% extends 'fraud_detection/base.html' %}
+
+{% block content %}
+<div class="row justify-content-center fade-in">
+    <div class="col-lg-10">
+        <div class="text-center mb-5">
+            <h1 class="display-4 fw-bold text-primary mb-4">
+                <i class="fas fa-search me-3"></i>Job Posting Fraud Detection
+            </h1>
+            <p class="lead text-muted">
+                Advanced machine learning system to detect fraudulent job postings with sentiment analysis and comprehensive risk assessment.
+            </p>
+        </div>
+
+        <div class="row g-4 mb-5">
+            <div class="col-md-4">
+                <div class="card h-100 text-center">
+                    <div class="card-body">
+                        <i class="fas fa-brain fa-3x text-primary mb-3"></i>
+                        <h5 class="card-title">AI-Powered Detection</h5>
+                        <p class="card-text">Uses advanced machine learning algorithms and sentiment analysis to identify fraudulent job postings.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card h-100 text-center">
+                    <div class="card-body">
+                        <i class="fas fa-chart-line fa-3x text-success mb-3"></i>
+                        <h5 class="card-title">Real-time Analysis</h5>
+                        <p class="card-text">Get instant fraud probability scores and risk assessments for any job posting.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card h-100 text-center">
+                    <div class="card-body">
+                        <i class="fas fa-shield-alt fa-3x text-warning mb-3"></i>
+                        <h5 class="card-title">Comprehensive Protection</h5>
+                        <p class="card-text">Analyzes multiple data points including text sentiment, company details, and job requirements.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row justify-content-center">
+            <div class="col-md-6 text-center">
+                <a href="{% url 'fraud_detection:predict' %}" class="btn btn-primary btn-lg me-3">
+                    <i class="fas fa-upload me-2"></i>Check Job Posting
+                </a>
+                <a href="{% url 'fraud_detection:dashboard' %}" class="btn btn-outline-primary btn-lg">
+                    <i class="fas fa-chart-bar me-2"></i>View Analytics
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
