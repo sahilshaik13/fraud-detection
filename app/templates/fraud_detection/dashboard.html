@@ -2,9 +2,9 @@
 
 {% block content %}
 <div class="fade-in">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h2><i class="fas fa-chart-bar me-2"></i>Analytics Dashboard</h2>
-        <div class="text-muted">Last updated: {{ "now"|date:"M d, Y H:i" }}</div>
+    <div class="d-flex justify-content-between align-items-center mb-4 text-white">
+        <h2><i class="fas fa-chart-bar me-2 text-white"></i>Analytics Dashboard</h2>
+        <div class="text-muted text-white">Last updated: {{ "now"|date:"M d, Y H:i" }}</div>
     </div>
     
     <!-- Statistics Cards -->
@@ -268,7 +268,7 @@
         <a href="{% url 'fraud_detection:predict' %}" class="btn btn-primary me-2">
             <i class="fas fa-plus me-2"></i>New Analysis
         </a>
-        <a href="{% url 'fraud_detection:home' %}" class="btn btn-outline-secondary">
+        <a href="{% url 'fraud_detection:home' %}" class="btn btn-secondary btn-lg">
             <i class="fas fa-home me-2"></i>Back to Home
         </a>
     </div>
