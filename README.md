@@ -224,27 +224,31 @@ Visit http://localhost:8000
 ## 🤖 AI Fraud Detection System
 
 **How It Works:**
-- User/job data sent to ML model:
-  ```
-  {
-    "title": "Marketing Intern",
-    "description": "...",
-    "company_profile": "...",
-    "requirements": "...",
-    "location": "Remote",
-    "employment_type": "Full-time"
-  }
-  ```
-- Model predicts `is_fraud`: 0 (real) or 1 (fraudulent)
-- Results cached in predictions table
-- Dashboard displays summary analytics, progress, feature impacts
+- User/job data is sent to the backend, which uses Gemini 1.5 Flash (Google's Gemini LLM) for prediction:
+   ```
+   {
+      "title": "Marketing Intern",
+      "description": "...",
+      "company_profile": "...",
+      "requirements": "...",
+      "location": "Remote",
+      "employment_type": "Full-time"
+   }
+   ```
+- The Gemini model predicts `is_fraud`: 0 (real) or 1 (fraudulent)
+- Results are cached in the predictions table
+- Dashboard displays summary analytics, progress, and feature impacts
 
 **Smart Caching Strategy**
-- Prediction results stored, cache refreshed if posting or user data changes
-- Reduces compute cost, speeds up access
+- Prediction results are stored and the cache is refreshed if posting or user data changes
+- Reduces compute cost and speeds up access
+
+**Model Details**
+- Gemini 1.5 Flash is used as the core LLM for fraud detection
+- The backend integrates with Google Generative AI APIs to access Gemini models for real-time predictions
+- Model outputs are combined with structured features for improved accuracy
 
 ***
-
 ## 📊 Analytics Features
 
 Dashboard provides insights including:

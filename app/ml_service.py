@@ -1,36 +1,36 @@
 import joblib
 import numpy as np
 import pandas as pd
+from sklearn.feature_extraction.text import TfidfVectorizer
 from textblob import TextBlob  # Fallback for sentiment
 import re
 import os
-from django.conf import settings
-import google.generativeai as genai  # For Gemini API
-from dotenv import load_dotenv
-
-load_dotenv()
-
 
 class FraudDetectionService:
-    def __init__(self, gemini_api_key=None):
-        # Path to your trained models
-        self.model_dir = os.path.join(settings.BASE_DIR, 'models')
-        
-        # Gemini API setup (requires API key)
-        self.gemini_api_key = gemini_api_key or os.getenv('GEMINI_API_KEY')
+    def __init__(self, model_dir='models', gemini_api_key=None):
+        self.model_dir = os.path.join(os.getcwd(), model_dir)
+        self.gemini_api_key = gemini_api_key
         self.gemini_model = None
-        if self.gemini_api_key:
-            genai.configure(api_key=self.gemini_api_key)
-            self.gemini_model = genai.GenerativeModel('gemini-2.5-flash')
-            print("✅ Gemini API initialized for advanced analysis")
-        else:
-            print("⚠️ No Gemini API key provided. Falling back to TextBlob for sentiment.")
-        
+        self.gemini_available = False
+
+        # Gemini API setup (optional - requires google-generativeai library)
+        try:
+            import google.generativeai as genai
+            if self.gemini_api_key:
+                genai.configure(api_key=self.gemini_api_key)
+                self.gemini_model = genai.GenerativeModel('gemini-1.5-flash')
+                self.gemini_available = True
+                print("✅ Gemini API initialized for advanced analysis")
+        except ImportError:
+            print("⚠️ google-generativeai not installed. Install with: pip install google-generativeai")
+        except Exception as e:
+            print(f"⚠️ Gemini setup failed: {e}. Falling back to TextBlob.")
+
         # Load ML models
         model_path = os.path.join(self.model_dir, 'fraud_detection_model.pkl')
         vectorizer_path = os.path.join(self.model_dir, 'tfidf_vectorizer.pkl')
         features_path = os.path.join(self.model_dir, 'feature_names.pkl')
-        
+
         self.model = None
         self.vectorizer = None
         self.feature_names = self._get_default_features()
@@ -49,7 +49,7 @@ class FraudDetectionService:
         
         if not self.is_trained:
             print("⚠️ No pre-trained model found. Using rule-based detection.")
-    
+
     def _get_default_features(self):
         return [
             'desc_sentiment', 'desc_subjectivity', 'req_sentiment', 'req_subjectivity',
@@ -59,10 +59,10 @@ class FraudDetectionService:
             'has_company_logo', 'has_questions', 'telecommuting', 'scam_keyword_score',
             'unrealistic_salary', 'gemini_scam_likelihood'
         ]
-    
+
     def clean_text(self, text):
         """Clean and preprocess text data"""
-        if pd.isna(text) or not text:
+        if text is None or pd.isna(text) or not str(text).strip():
             return ""
         
         text = str(text)
@@ -73,24 +73,24 @@ class FraudDetectionService:
         text = re.sub(r'[^\w\s.,!?]', ' ', text)
         text = re.sub(r'\s+', ' ', text)
         return text.lower().strip()
-    
+
     def get_sentiment(self, text):
         """Extract sentiment polarity and subjectivity using Gemini API (fallback to TextBlob)"""
         cleaned = self.clean_text(text)
         if not cleaned:
-            return 0.0, 0.0, 0.0  # Added scam_likelihood default
+            return 0.0, 0.0, 0.0  # polarity, subjectivity, scam_likelihood
         
-        if self.gemini_model:
+        if self.gemini_available and self.gemini_model:
             try:
                 prompt = f"Analyze this job posting text for sentiment and scam indicators: '{cleaned}'. Return ONLY three floats separated by commas: polarity (-1 to 1), subjectivity (0 to 1), scam_likelihood (0 to 1)."
-                print(f"📤 Sending prompt to Gemini: {prompt}")  # Debug print: Prompt sent
+                print(f"📤 Sending prompt to Gemini: {prompt[:100]}...")  # Truncated debug
                 response = self.gemini_model.generate_content(prompt)
                 raw_response = response.text.strip()
-                print(f"📥 Gemini raw response: {raw_response}")  # Debug print: Raw response
-                parts = raw_response.split(',')
+                print(f"📥 Gemini raw response: {raw_response}")  # Debug
+                parts = [p.strip() for p in raw_response.split(',')]
                 if len(parts) == 3:
                     polarity, subjectivity, scam_likelihood = map(float, parts)
-                    print(f"✅ Gemini parsed: Polarity={polarity}, Subjectivity={subjectivity}, Scam Likelihood={scam_likelihood}")  # Debug print: Parsed values
+                    print(f"✅ Gemini parsed: Polarity={polarity}, Subjectivity={subjectivity}, Scam Likelihood={scam_likelihood}")
                     return polarity, subjectivity, scam_likelihood
                 else:
                     raise ValueError("Invalid Gemini response format")
@@ -98,14 +98,14 @@ class FraudDetectionService:
                 print(f"❌ Gemini sentiment error: {e}. Falling back to TextBlob.")
         
         # Fallback to TextBlob
-        print("🔄 Falling back to TextBlob for sentiment analysis.")  # Debug print: Fallback
+        print("🔄 Falling back to TextBlob for sentiment analysis.")
         blob = TextBlob(cleaned)
         polarity = blob.sentiment.polarity
         subjectivity = blob.sentiment.subjectivity
         scam_likelihood = 0.0  # Default for fallback
-        print(f"✅ TextBlob parsed: Polarity={polarity}, Subjectivity={subjectivity}, Scam Likelihood={scam_likelihood} (default)")  # Debug print
+        print(f"✅ TextBlob parsed: Polarity={polarity}, Subjectivity={subjectivity}, Scam Likelihood={scam_likelihood} (default)")
         return polarity, subjectivity, scam_likelihood
-    
+
     def detect_scam_keywords(self, text):
         """Detect common scam keywords and return a score (0-1)"""
         if not text:
@@ -121,7 +121,7 @@ class FraudDetectionService:
         cleaned = self.clean_text(text).lower()
         matches = sum(1 for keyword in scam_keywords if keyword in cleaned)
         return min(matches / len(scam_keywords), 1.0)
-    
+
     def extract_features(self, job_data):
         """Extract all features from job posting data"""
         if not isinstance(job_data, dict):
@@ -166,16 +166,16 @@ class FraudDetectionService:
             'missing_salary': 1 if not salary_range else 0,
             'missing_company': 1 if not company_profile else 0,
             'missing_requirements': 1 if not requirements else 0,
-            'has_company_logo': 1 if job_data.get('has_company_logo') else 0,
-            'has_questions': 1 if job_data.get('has_questions') else 0,
-            'telecommuting': 1 if job_data.get('telecommuting') else 0,
+            'has_company_logo': 1 if job_data.get('has_company_logo', False) else 0,
+            'has_questions': 1 if job_data.get('has_questions', False) else 0,
+            'telecommuting': 1 if job_data.get('telecommuting', False) else 0,
             'scam_keyword_score': self.detect_scam_keywords(combined_text),
             'unrealistic_salary': unrealistic_salary,
             'gemini_scam_likelihood': gemini_scam_likelihood  # New feature from Gemini
         }
         
         return features
-    
+
     def rule_based_prediction(self, features):
         """Enhanced rule-based fraud detection with stricter rules"""
         fraud_score = 0.0
@@ -245,7 +245,7 @@ class FraudDetectionService:
         confidence = min(0.7 + (fraud_probability * 0.3), 1.0)
         
         return fraud_probability, confidence, reasons
-    
+
     def ml_prediction(self, job_data):
         """Machine learning based prediction"""
         try:
@@ -263,16 +263,16 @@ class FraudDetectionService:
                 raise ValueError("Feature dimensions are empty")
             X = np.hstack([text_features, numerical_values])
             prediction = self.model.predict(X)
-            probabilities = self.model.predict_proba(X)
+            probabilities = self.model.predict_proba(X)[0]  # Get [0] for single sample
             fraud_probability = probabilities[1]
             confidence = max(probabilities)
             return fraud_probability, confidence, []  # No reasons for ML
         except Exception as e:
             print(f"ML prediction error: {e}")
             return self.rule_based_prediction(self.extract_features(job_data))
-    
+
     def predict_fraud(self, job_data):
-        """Main prediction function"""
+        """Main prediction function (returns percentages for visualization)"""
         try:
             if not isinstance(job_data, dict) or not job_data:
                 raise ValueError("Invalid or empty job_data")
@@ -290,18 +290,26 @@ class FraudDetectionService:
                 risk_level = 'Medium'
             else:
                 risk_level = 'Low'
+            
+            # Convert to percentages for easy visualization
+            fraud_probability_pct = fraud_probability * 100
+            confidence_pct = confidence * 100
+            sentiment_pct = features['desc_sentiment'] * 100  # -100% to 100%
+            
             result = {
                 'is_fraudulent': is_fraudulent,
-                'confidence': confidence,
-                'fraud_probability': fraud_probability,
-                'sentiment_score': features['desc_sentiment'],
+                'confidence': confidence_pct,  # e.g., 80.0
+                'fraud_probability': fraud_probability_pct,  # e.g., 65.0
+                'sentiment_score': sentiment_pct,  # e.g., 25.0
                 'risk_level': risk_level,
                 'method': method,
                 'reasons': reasons,
                 'features': features
             }
             print(f"🔍 Fraud prediction completed using {method}")
-            print(f"   Fraud Probability: {fraud_probability:.2%}")
+            print(f"   Fraud Probability: {fraud_probability_pct:.1f}%")
+            print(f"   Confidence: {confidence_pct:.1f}%")
+            print(f"   Sentiment Score: {sentiment_pct:.1f}%")
             print(f"   Risk Level: {risk_level}")
             if reasons:
                 print("   Reasons: " + "; ".join(reasons))
@@ -310,11 +318,29 @@ class FraudDetectionService:
             print(f"❌ Prediction error: {e}")
             return {
                 'is_fraudulent': True,
-                'confidence': 0.5,
-                'fraud_probability': 0.5,
+                'confidence': 50.0,
+                'fraud_probability': 50.0,
                 'sentiment_score': 0.0,
                 'risk_level': 'Medium',
                 'method': 'Error fallback',
                 'reasons': [str(e)],
                 'error': str(e)
             }
+
+# Example usage (uncomment to test)
+if __name__ == "__main__":
+    service = FraudDetectionService(gemini_api_key="your_gemini_key_here")  # Optional
+
+    sample_job = {
+        'title': 'Data Entry - Earn $100k No Experience Needed!',
+        'description': 'Work from home, easy money, send bank details to start.',
+        'requirements': 'No skills required, apply now!',
+        'company_profile': '',
+        'salary_range': '$100,000',
+        'has_company_logo': False,
+        'has_questions': False,
+        'telecommuting': True
+    }
+
+    result = service.predict_fraud(sample_job)
+    print(result)

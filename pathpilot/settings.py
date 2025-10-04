@@ -88,19 +88,23 @@ from pathlib import Path
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 # Database configuration for Cloud SQL
+import os
+
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': os.environ.get('DB_NAME', 'frauddb'),
-        'USER': os.environ.get('DB_USER', 'django-user'),
-        'PASSWORD': os.environ.get('DB_PASSWORD', ''),
-        'HOST': os.environ.get('DB_HOST', '127.0.0.1'),
+        'NAME': os.environ.get('DB_NAME', 'neondb'),
+        'USER': os.environ.get('DB_USER', 'neondb_owner'),
+        'PASSWORD': os.environ.get('DB_PASSWORD', ''),  # Replace 'xxxx' with your actual password
+        'HOST': os.environ.get('DB_HOST', 'ep-sweet-hall-adm4xim0-pooler.c-2.us-east-1.aws.neon.tech'),
         'PORT': os.environ.get('DB_PORT', '5432'),
         'OPTIONS': {
             'sslmode': os.environ.get('DB_SSLMODE', 'require'),
+            'channel_binding': 'require',  # Added from the query parameter
         },
     }
 }
+
 
 # Password validation
 # https://docs.djangoproject.com/en/5.2/ref/settings/#auth-password-validators
