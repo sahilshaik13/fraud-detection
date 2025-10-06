@@ -1,7 +1,0 @@
-startupProbe:
-  tcpSocket:
-    port: 8000
-  initialDelaySeconds: 0
-  timeoutSeconds: 240
-  periodSeconds: 240
-  failureThreshold: 1
