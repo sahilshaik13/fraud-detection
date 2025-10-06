@@ -1,6 +1,6 @@
 startupProbe:
   tcpSocket:
-    port: 8080
+    port: 8000
   initialDelaySeconds: 0
   timeoutSeconds: 240
   periodSeconds: 240
