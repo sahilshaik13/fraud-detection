@@ -146,3 +146,11 @@ STATIC_URL = 'static/'
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+from django.conf import settings
+import os
+
+MODEL_DIR = os.path.join(settings.BASE_DIR, 'modelpkl')
+MODEL_PATH = os.path.join(MODEL_DIR, 'fraud_detection_model.pkl')
+VECTORIZER_PATH = os.path.join(MODEL_DIR, 'tfidf_vectorizer.pkl')
+FEATURES_PATH = os.path.join(MODEL_DIR, 'feature_names.pkl')
