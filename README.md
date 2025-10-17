@@ -54,9 +54,7 @@ The backend and ML processing rely on:
 | scikit-learn                 | Machine learning library                     |
 | joblib                       | Model serialization and persistence          |
 | textblob                     | NLP for sentiment and text analysis          |
-| cloud-sql-python-connector   | Google Cloud SQL connections                 |
 | SQLAlchemy                   | Database ORM and toolkit                     |
-| google-auth                  | Auth for Google Cloud APIs                   |
 | google-generativeai          | Access Google generative AI models           |
 
 ***
@@ -71,7 +69,6 @@ Add the following variables to your `.env` file to securely connect to databases
 | GOOGLE_APPLICATION_CREDENTIALS       | Path to Google service account file           | ✅       |
 | GENERATIVE_AI_API_KEY                | Key for google-generativeai                   | ✅       |
 | SQLALCHEMY_DATABASE_URI              | SQLAlchemy DB URI                             | ✅       |
-| CLOUD_SQL_CONNECTION_NAME            | Google Cloud SQL instance ID                  | ✅       |
 | SECRET_KEY                           | Django secret key                             | ✅       |
 | APP_URL                              | App base URL                                  | ✅       |
 
@@ -241,7 +238,7 @@ Visit http://localhost:8000
 ```
 
 - The backend `FraudDetectionService` processes the data: extracts features (e.g., text length, sentiment), applies rule-based heuristics, and uses Gemini 1.5 Flash (via Google Generative AI API) for advanced sentiment analysis and scam likelihood scoring.
-- If pre-trained ML models (e.g., RandomForest + TF-IDF) are available, they provide primary predictions; otherwise, falls back to hybrid rules + Gemini.
+- The backend first checks for available ML models. If found, these models handle classification and scoring. If models are absent, the rule-based engine runs using text heuristics and Gemini-assisted NLP analysis for a blended fraud likelihood assessment.
 - Output includes `is_fraudulent` (boolean), `fraud_probability` (0-100%), `confidence` (0-100%), `risk_level` (Low/Medium/High), and `reasons` array for explainability.
 - Results are returned as JSON and can be cached in a database (e.g., PostgreSQL/Supabase) for repeated queries.
 
@@ -254,16 +251,17 @@ Visit http://localhost:8000
 
 **Model Details**
 
-- **Core Engine**: Hybrid system combining rule-based detection (e.g., scam keywords, missing fields) with optional scikit-learn ML models for structured predictions.
+- **Core Engine**: A hybrid detection pipeline that prioritizes trained ML models for fraud classification. When no trained model is available (or fails to load), a rule-based fallback system automatically executes predictions using predefined heuristics. NLP enrichment is handled by Gemini via the Generative AI API for text sentiment and scam likelihood extraction.
 - **Pre-trained Models**: Loaded from `./models/` directory as pickle files (.pkl):
     - `fraud_detection_model.pkl`: RandomForestClassifier (ensemble of decision trees) trained on labeled job data for binary classification (fraudulent vs. legitimate). Achieves high accuracy (typically 95-99%) by handling imbalanced classes and providing feature importance (e.g., scam keywords, text length).
     - `tfidf_vectorizer.pkl`: TfidfVectorizer from scikit-learn for converting job text (title, description, etc.) into sparse numerical features, emphasizing discriminative words while downweighting common terms.
     - `feature_names.pkl`: Serialized list of 20 numerical features (e.g., `desc_sentiment`, `scam_keyword_score`, `unrealistic_salary`) used alongside TF-IDF for hybrid input to the classifier.
+    - If the models directory is empty, or pre-trained models are unavailable, the system automatically invokes the rule-based prediction engine. This engine uses heuristic indicators—like unrealistic salary, missing company profile, or scam-token frequency—to classify postings until models are retrained or updated.
 - **Training Overview**: Models are trained on datasets like Kaggle's Fake Job Postings (18k samples) using an 80/20 train-test split. TF-IDF (max_features=5000, ngram_range=(1,2)) extracts text vectors; numerical features include sentiment (via TextBlob/Gemini) and heuristics. RandomForest (n_estimators=100, max_depth=10) is selected for its robustness, low overfitting, and interpretability—outperforms baselines like Logistic Regression (94%) and Naive Bayes (90%) with 96-99% accuracy, precision, and recall.
-- **Gemini 1.5 Flash Integration**: Leverages Google's lightweight LLM (194 tokens/sec, \$0.10/M tokens) for multimodal analysis. Prompts Gemini to score sentiment polarity (-1 to 1), subjectivity (0-1), and scam likelihood (0-1) from cleaned text sections. Example prompt: "Analyze for fraud indicators: '{text}'. Return: polarity,subjectivity,scam_likelihood." Enhances ML inputs with `gemini_scam_likelihood` feature.
-- **Fallbacks**: TextBlob for sentiment if Gemini unavailable; rule-based scoring ensures robustness without API dependency.
+- **Gemini 1.5 Flash Integration**: Leverages Google’s lightweight LLM for multimodal analysis. Prompts Gemini to score sentiment polarity, subjectivity, and scam likelihood…
+- **Fallbacks**: When Gemini is unavailable, sentiment extraction gracefully falls back to TextBlob, and fraud scores rely solely on heuristic-based or rule-driven predictions.
 - **Accuracy Enhancements**: Features like `gemini_scam_likelihood` boost scores; system handles edge cases (e.g., short texts, NaN values) via pandas preprocessing. Retrain models periodically with new data for >95% F1-score.
-- **Deployment**: Runs on Google Cloud Run/Vercel; set `GEMINI_API_KEY` in `.env` for production. Test with sample jobs to tune thresholds (e.g., fraud >50% = high risk).
+- **Deployment**: Runs on Render; set `GEMINI_API_KEY` in `.env` for production. Test with sample jobs to tune thresholds (e.g., fraud >50% = high risk).
 
 ***
 ## 📊 Analytics Features
@@ -391,6 +389,7 @@ Development Guidelines:
 - **Build Errors**: Check for Python/TypeScript errors, missing modules
 - **Database**: Validate connection string, permissions, schema
 - **Prediction Issues**: Check model path, dependencies, input format
+- **Missing Models**: If no ML model files are found, the system automatically switches to rule-based heuristics combined with Gemini NLP for fraud scoring. To restore full functionality, re-train models and place them in the models/ directory.
 
 ***
 
