@@ -29,8 +29,10 @@ Job Posting Fraudulent Detection is a comprehensive machine learning project tha
 - **Backend:** Django web framework
 - **WSGI Server:** Gunicorn
 - **Machine Learning:** Scikit-learn, joblib, numpy, pandas
-- **Database:** PostgreSQL, SQLAlchemy ORM
-- **Database Adapter:** psycopg2-binary
+- **Database**: NeonDB (PostgreSQL-compatible, serverless)
+- **ORM**: Django ORM + SQLAlchemy (if used for analytics or async tasks)
+- **Adapter**: psycopg2-binary
+- **Connection**: Encrypted with SSL enforced (sslmode=require, channel_binding=require)
 - **Environment Management:** python-dotenv
 - **NLP:** TextBlob
 - **Authentication & Cloud:** google-auth, cloud-sql-python-connector
@@ -65,12 +67,18 @@ Add the following variables to your `.env` file to securely connect to databases
 
 | Variable Name                        | Description                                   | Required |
 |--------------------------------------|-----------------------------------------------|----------|
-| DATABASE_URL                         | PostgreSQL DB connection string               | ✅       |
 | GOOGLE_APPLICATION_CREDENTIALS       | Path to Google service account file           | ✅       |
 | GENERATIVE_AI_API_KEY                | Key for google-generativeai                   | ✅       |
-| SQLALCHEMY_DATABASE_URI              | SQLAlchemy DB URI                             | ✅       |
 | SECRET_KEY                           | Django secret key                             | ✅       |
 | APP_URL                              | App base URL                                  | ✅       |
+| DB_ENGINE                            | django.db.backends.postgresql                 | ✅       |
+| DB_NAME                              | neondb                                        | ✅       |
+| DB_USER                              | neondb_owner                                  | ✅       |
+| DB_PASSWORD                          | your_password_here                            | ✅       |
+| DB_HOST                              | ep-sweet-hall-adm4xim0-pooler.c-2.us-east-1.aws.neon.tech | ✅       |
+| DB_PORT                              | 5432                                          | ✅       |
+| DB_SSLMODE                           | require                                       | ✅       |
+
 
 ### Example `.env`
 
@@ -78,16 +86,15 @@ Add the following variables to your `.env` file to securely connect to databases
 # Django
 SECRET_KEY=your_django_secret_key
 
-# Database
-DATABASE_URL=postgres://user:password@host:port/db_name
-
 # Google Services
 GOOGLE_APPLICATION_CREDENTIALS=/path/to/credentials.json
 GENERATIVE_AI_API_KEY=your_google_genai_api_key
-CLOUD_SQL_CONNECTION_NAME=your_cloud_sql_instance
 
-# ORM
-SQLALCHEMY_DATABASE_URI=postgresql+psycopg2://user:password@host:port/db_name
+# Settings.py
+'OPTIONS': {
+    'sslmode': 'require',
+    'channel_binding': 'require',
+}
 
 APP_URL=http://localhost:8000
 ```
@@ -374,11 +381,13 @@ Development Guidelines:
 
 | Variable | Description | Required |
 |----------|-------------|----------|
-| DATABASE_URL | PostgreSQL DB connection | ✅ |
-| SUPABASE_URL | Supabase project URL | ✅ |
-| SUPABASE_ANON_KEY | Supabase anon key | ✅ |
-| SUPABASE_SERVICE_ROLE_KEY | Supabase service role | ✅ |
-| APP_URL | App base URL | ✅ |
+| DB_ENGINE                            | django.db.backends.postgresql                 | ✅       |
+| DB_NAME                              | neondb                                        | ✅       |
+| DB_USER                              | neondb_owner                                  | ✅       |
+| DB_PASSWORD                          | your_password_here                            | ✅       |
+| DB_HOST                              | ep-sweet-hall-adm4xim0-pooler.c-2.us-east-1.aws.neon.tech | ✅       |
+| DB_PORT                              | 5432                                          | ✅       |
+| DB_SSLMODE                           | require                                       | ✅       |
 
 ***
 
@@ -387,7 +396,8 @@ Development Guidelines:
 ### Common Issues
 
 - **Build Errors**: Check for Python/TypeScript errors, missing modules
-- **Database**: Validate connection string, permissions, schema
+- **Database**: NeonDB SSL Error: If you encounter “channel_binding not supported” or SSL errors, ensure psycopg2-binary ≥ 2.9.9 and your Django DATABASES block includes both sslmode=require and channel_binding=require.
+- **Connection Pooling**: Neon uses a connection pooler by default (e.g., ep-***-pooler.neon.tech); always use the pooler host for Django web apps.
 - **Prediction Issues**: Check model path, dependencies, input format
 - **Missing Models**: If no ML model files are found, the system automatically switches to rule-based heuristics combined with Gemini NLP for fraud scoring. To restore full functionality, re-train models and place them in the models/ directory.
 
